@@ -183,18 +183,6 @@ pre.tree{
   margin:18px 0 24px;
   position:relative;
 }
-pre.tree::before{
-  content:"family tree";
-  position:absolute;
-  top:-9px; left:16px;
-  background:var(--paper);
-  padding:0 8px;
-  font-family:'Space Grotesk',sans-serif;
-  font-size:9.5px;
-  letter-spacing:0.18em;
-  text-transform:uppercase;
-  color:var(--ink-dim);
-}
 pre.tree code{
   font-family:'Nanum Gothic Coding', 'Courier Prime', monospace;
   font-size:13px;
@@ -259,6 +247,21 @@ html[data-theme="dark"]{color-scheme:dark;--paper:#1d1a16;--paper-deep:#17140f;-
 html[data-theme="dark"] body{background-image:none}
 html[data-theme="dark"] pre.tree code{color:#d9c7a8}
 .intro{margin:40px 0 0;padding:20px 26px;border-left:3px solid var(--gold);background:var(--card);font-size:14.5px;line-height:1.7}.intro-heading{font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:.25em;color:var(--ink-dim);margin:0 0 8px}.intro ul{margin:0;padding-left:18px}.intro li{margin-bottom:4px}.intro code{font-family:'Nanum Gothic Coding',monospace;font-size:13px}
+.chapter h2,.chapter-title{scroll-margin-top:16px}
+#fab{position:fixed;right:12px;bottom:46px;z-index:2147482000;display:flex;flex-direction:column;gap:8px}
+#fab button{width:44px;height:44px;padding:0;border:1px solid var(--rule);border-radius:8px;background:var(--card);color:var(--ink);font:20px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+#fab button:hover,#fab button:focus-visible{border-color:var(--maroon);color:var(--maroon)}
+#toc-panel{position:fixed;right:66px;bottom:46px;z-index:2147482000;width:min(340px,calc(100vw - 84px));max-height:78vh;overflow-y:auto;padding:18px 20px 14px;background:var(--card);border:1px solid var(--rule);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-family:'Source Serif 4',serif;line-height:1.5}
+#toc-panel[hidden]{display:none}
+#toc-panel .tp-title{font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin:0 0 10px}
+#toc-panel ol{list-style:none;margin:0;padding:0}
+#toc-panel ol ol{margin:2px 0 8px 16px}
+#toc-panel a{display:block;padding:3px 0;color:var(--ink);text-decoration:none;font-size:14px}
+#toc-panel .ch>a{font-size:15.5px;font-weight:600;margin-top:6px}
+#toc-panel a .n{color:var(--teal);margin-right:4px}
+#toc-panel a:hover{color:var(--maroon)}
+#toc-panel a.on{color:var(--maroon);font-weight:700}
+@media print{#fab,#toc-panel{display:none}}
 #theme-toggle{position:fixed;right:10px;bottom:10px;width:26px;height:26px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;font:14px/26px system-ui,sans-serif;text-align:center;cursor:pointer;opacity:.28;z-index:2147483000;transition:opacity .15s}
 #theme-toggle:hover,#theme-toggle:focus-visible{opacity:.85}
 @media print{#theme-toggle{display:none}}
@@ -1677,6 +1680,45 @@ window.__toggleTheme=function(){var n=r.dataset.theme==='dark'?'light':'dark';tr
   </footer>
 
 </div>
+<div id="fab">
+  <button id="toc-btn" type="button" aria-label="목차 열기" aria-expanded="false" aria-controls="toc-panel" title="목차">☰</button>
+  <button id="go-top" type="button" aria-label="맨 위로" title="맨 위로">↑</button>
+  <button id="go-bottom" type="button" aria-label="맨 아래로" title="맨 아래로">↓</button>
+</div>
+<nav id="toc-panel" aria-label="목차" hidden><p class="tp-title">목차</p><ol id="tp-list"></ol></nav>
+<script>
+(function(){
+var list=document.getElementById('tp-list'),panel=document.getElementById('toc-panel'),btn=document.getElementById('toc-btn'),items=[];
+function el(t,c){var e=document.createElement(t);if(c)e.className=c;return e}
+function link(href,num,text){var a=el('a');a.href=href;var n=el('span','n');n.textContent=num;a.appendChild(n);a.appendChild(document.createTextNode(text));return a}
+document.querySelectorAll('article.chapter').forEach(function(art,ci){
+  var t=art.querySelector('.chapter-title');if(!t)return;
+  var li=el('li','ch'),a=link('#'+art.id,(ci+1)+'. ',t.textContent);li.appendChild(a);items.push({t:art,a:a});
+  var ol=el('ol');
+  art.querySelectorAll(':scope > h2').forEach(function(h,si){
+    if(!h.id)h.id=art.id+'-s'+(si+1);
+    var l2=el('li'),a2=link('#'+h.id,(ci+1)+'.'+(si+1)+'. ',h.textContent.replace(/^\d+\.\s*/,''));
+    l2.appendChild(a2);ol.appendChild(l2);items.push({t:h,a:a2});
+  });
+  li.appendChild(ol);list.appendChild(li);
+});
+function setOpen(o){panel.hidden=!o;btn.setAttribute('aria-expanded',o);if(o)mark(true)}
+btn.onclick=function(e){e.stopPropagation();setOpen(panel.hidden)};
+panel.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('a')&&innerWidth<700)setOpen(false)});
+document.addEventListener('click',function(){setOpen(false)});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')setOpen(false)});
+document.getElementById('go-top').onclick=function(){scrollTo({top:0,behavior:'smooth'})};
+document.getElementById('go-bottom').onclick=function(){scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})};
+var cur=null,tick=false;
+function mark(force){
+  var best=null;for(var i=0;i<items.length;i++){if(items[i].t.getBoundingClientRect().top<=140)best=items[i];else break}
+  if(best===cur&&!force)return;if(cur)cur.a.classList.remove('on');cur=best;
+  if(cur){cur.a.classList.add('on');if(!panel.hidden)cur.a.scrollIntoView({block:'nearest'})}
+}
+addEventListener('scroll',function(){if(!tick){tick=true;requestAnimationFrame(function(){tick=false;mark()})}},{passive:true});
+mark();
+})();
+</script>
 <button id="theme-toggle" type="button" aria-label="다크 모드 전환" title="다크 모드 전환" onclick="__toggleTheme()">◐</button>
 </body>
 </html>
